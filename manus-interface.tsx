@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react"
 import type { ViewType, InterfaceState } from "./types"
 import ContentPanel, { type ContentPanelRef } from "./components/ContentPanel"
 import ChatPanel from "./components/ChatPanel"
-import InitialChatInterface from "./components/InitialChatInterface"
 
 export default function ManusInterface() {
   const [interfaceState, setInterfaceState] = useState<InterfaceState>("chat-only")
@@ -47,11 +46,11 @@ export default function ManusInterface() {
     if (interfaceState === "full-interface" && currentStep < 6 && !waitingForConfirmation) {
       // 为每个步骤设置不同的时间间隔
       const stepDelays = [
-        5000, // 计划 -> 拓扑: 5秒
+        6000, // 计划 -> 拓扑: 5秒
         3000, // 拓扑 -> 告警: 3秒
         3000, // 告警 -> 分析: 3秒
-        4000, // 分析完成 -> 等待确认: 4秒
-        6000, // 修复 -> 验证: 6秒
+        3000, // 分析完成 -> 等待确认: 4秒
+        8000, // 修复 -> 验证: 6秒
         3000, // 验证 -> 完成: 3秒
       ]
       
@@ -77,24 +76,23 @@ export default function ManusInterface() {
     }
   }, [interfaceState, currentStep, waitingForConfirmation])
 
-  if (interfaceState === "chat-only") {
-    return <InitialChatInterface onTaskSubmit={handleTaskSubmit} />
-  }
-
   return (
     <div className="flex h-screen bg-gray-50">
       <ContentPanel 
         ref={contentPanelRef}
         currentView={currentView} 
-        currentStep={currentStep} 
+        currentStep={currentStep}
+        showInitialState={interfaceState === "chat-only"}
       />
       <ChatPanel 
         onViewChange={handleViewChange} 
         onToolSwitch={handleToolSwitch}
         onConfirmRecovery={handleConfirmRecovery}
+        onTaskSubmit={handleTaskSubmit}
         analysisCompleted={analysisCompleted}
         currentStep={currentStep} 
         userTask={userTask}
+        showInitialState={interfaceState === "chat-only"}
       />
     </div>
   )

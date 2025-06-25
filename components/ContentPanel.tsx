@@ -14,6 +14,7 @@ import VerificationView from "./views/VerificationView"
 interface ContentPanelProps {
   currentView: ViewType
   currentStep: number
+  showInitialState?: boolean
 }
 
 export interface ContentPanelRef {
@@ -21,7 +22,7 @@ export interface ContentPanelRef {
 }
 
 const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
-  ({ currentView, currentStep }, ref) => {
+  ({ currentView, currentStep, showInitialState = false }, ref) => {
     const [showToolPopup, setShowToolPopup] = useState(false)
     const [toolView, setToolView] = useState<ViewType>("plan")
     const [isAnimating, setIsAnimating] = useState(false)
@@ -123,7 +124,7 @@ const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
 
     return (
       <div className="flex-[2] flex flex-col h-full bg-white border-r border-gray-200 relative">
-        {/* Main Content Area - iframe */}
+        {/* Main Content Area - 始终显示iframe */}
         <div className="flex-1 min-h-0 overflow-hidden">
           <iframe
             src="https://www.baidu.com"
