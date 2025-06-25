@@ -1,8 +1,9 @@
-import { FileText, Globe, AlertTriangle, Search, Terminal, Shield, Cpu, CheckCircle, Clock, BookOpen, Play, User } from "lucide-react"
+import { FileText, Globe, AlertTriangle, Search, Terminal, Shield, Cpu, CheckCircle, Clock, BookOpen, Play, User, MousePointerClick } from "lucide-react"
 import type { ViewType } from "../types"
 import { Timeline, TimelineItem } from "@/components/ui/timeline"
 import { LoadingPulse } from "@/components/ui/loading-dots"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useState, useEffect } from 'react'
 
 interface ChatMessagesProps {
   onViewChange: (view: ViewType) => void
@@ -10,6 +11,94 @@ interface ChatMessagesProps {
   userTask: string
   onConfirmRecovery?: () => void
   analysisCompleted?: boolean
+}
+
+// 子步骤组件
+function SubSteps({ substeps, onViewChange, stepViewName, stepStatus }: {
+  substeps: any[],
+  onViewChange: (view: ViewType) => void,
+  stepViewName: ViewType,
+  stepStatus: string
+}) {
+  const [substepStates, setSubstepStates] = useState<('pending' | 'in-progress' | 'completed')[]>([])
+  const [timersStarted, setTimersStarted] = useState(false)
+
+  useEffect(() => {
+    // 初始化所有子步骤状态为pending
+    if (substepStates.length === 0) {
+      setSubstepStates(new Array(substeps.length).fill('pending'))
+    }
+  }, [substeps.length, substepStates.length])
+
+  useEffect(() => {
+    // 当步骤状态为in-progress或completed时，开始执行子步骤序列
+    if ((stepStatus === "in-progress" || stepStatus === "completed") && !timersStarted && substepStates.length > 0) {
+      setTimersStarted(true)
+
+      substeps.forEach((substep, index) => {
+        // 开始执行子步骤
+        setTimeout(() => {
+          setSubstepStates(prev => {
+            const newStates = [...prev]
+            newStates[index] = 'in-progress'
+            return newStates
+          })
+        }, substep.startDelay || 0)
+
+        // 完成子步骤
+        setTimeout(() => {
+          setSubstepStates(prev => {
+            const newStates = [...prev]
+            newStates[index] = 'completed'
+            return newStates
+          })
+        }, (substep.startDelay || 0) + (substep.duration || 2000))
+      })
+    }
+  }, [stepStatus, substeps, timersStarted, substepStates.length])
+
+  return (
+    <div className="space-y-3">
+      {substeps.map((substep, index) => {
+        const substepStatus = substepStates[index] || 'pending'
+
+        if (substepStatus === 'pending') {
+          return null // 不显示还未开始的子步骤
+        }
+
+        return (
+          <div key={index} className="space-y-2">
+            {substepStatus === 'in-progress' && (
+              <div className="flex items-center gap-2 text-sm text-blue-600">
+                <LoadingPulse size="sm" />
+                <span>{substep.statusText}</span>
+              </div>
+            )}
+
+            {substepStatus === 'completed' && (
+              <>
+                <button
+                  onClick={() => onViewChange(stepViewName)}
+                  className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-150 group"
+                >
+                  <substep.toolIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-600" />
+                  <span className="text-xs text-gray-600 group-hover:text-gray-700">
+                    {substep.toolName}
+                  </span>
+                  <svg className="w-2.5 h-2.5 text-gray-400 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <div className="text-sm text-gray-600">
+                  {substep.conclusion}
+                </div>
+              </>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function ChatMessages({ onViewChange, currentStep, userTask, onConfirmRecovery, analysisCompleted }: ChatMessagesProps) {
@@ -52,7 +141,27 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
       icon: Globe,
       viewName: "alerts" as ViewType,
       time: "14:35",
-      conclusion: "确认告警类型：链路故障（CRITICAL级别），影响3个业务区域，无服务中断风险"
+      conclusion: "确认告警类型：链路故障（CRITICAL级别），影响3个业务区域，无服务中断风险",
+      substeps: [
+        {
+          title: "浏览告警监控页面",
+          toolName: "浏览告警监控页面",
+          toolIcon: Globe,
+          statusText: "正在查看系统告警页面，筛选相关告警",
+          conclusion: "确认告警类型：链路故障（CRITICAL级别），影响3个业务区域，无服务中断风险",
+          startDelay: 0,    // 立即开始
+          duration: 3000    // 运行3秒
+        },
+        {
+          title: "点击查看告警详情",
+          toolName: "点击查看告警详情",
+          toolIcon: MousePointerClick,
+          statusText: "正在点击查看告警详情，获取更多故障信息",
+          conclusion: "获取详细告警信息：SW-CORE-01端口eth0/1物理层故障，故障时间14:28:45，影响路由条目127条",
+          startDelay: 3000, // 3秒后开始
+          duration: 2000    // 运行2秒
+        }
+      ]
     },
     {
       title: "进行故障根因分析，确定最佳修复方案",
@@ -119,7 +228,7 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
 
   const renderStepContent = (step: any, index: number) => {
     const status = getStepStatus(index)
-    
+
     if (status === "in-progress") {
       // 特殊处理第4步 - 显示调用工具加载修复知识
       if (index === 3) {
@@ -132,6 +241,16 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
           </div>
         )
       }
+
+      // 如果有子步骤，显示子步骤；否则显示默认的进行中状态
+      if (step.substeps) {
+        return (
+          <div className="mt-2 space-y-2">
+            <SubSteps substeps={step.substeps} onViewChange={onViewChange} stepViewName={step.viewName} stepStatus={status} />
+          </div>
+        )
+      }
+
       return (
         <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
           <LoadingPulse size="sm" />
@@ -139,7 +258,7 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
         </div>
       )
     }
-    
+
     if (status === "completed") {
       // 特殊处理第4步 - 显示修复方案和确认按钮
       if (index === 3 && step.recoveryPlan) {
@@ -148,7 +267,7 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
             <div className="text-sm text-gray-600">
               {step.conclusion}
             </div>
-            
+
             {/* 修复方案展示 */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
@@ -164,7 +283,7 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
                 预期效果：{step.recoveryPlan.expectedResult}
               </div>
             </div>
-            
+
             {/* 确认按钮 */}
             {currentStep === 3 && onConfirmRecovery && (
               <button
@@ -178,24 +297,32 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
           </div>
         )
       }
-      
+
       return (
         <div className="mt-2 space-y-2">
-          <button
-            onClick={() => onViewChange(step.viewName)}
-            className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-150 group"
-          >
-            <step.toolIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-600" />
-            <span className="text-xs text-gray-600 group-hover:text-gray-700">
-              {step.toolName}
-            </span>
-            <svg className="w-2.5 h-2.5 text-gray-400 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <div className="text-sm text-gray-600">
-            {step.conclusion}
-          </div>
+          {/* 如果有子步骤，只渲染子步骤；否则渲染原来的工具和结论 */}
+          {step.substeps ? (
+            <SubSteps substeps={step.substeps} onViewChange={onViewChange} stepViewName={step.viewName} stepStatus={status} />
+          ) : (
+            <>
+              <button
+                onClick={() => onViewChange(step.viewName)}
+                className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-150 group"
+              >
+                <step.toolIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-600" />
+                <span className="text-xs text-gray-600 group-hover:text-gray-700">
+                  {step.toolName}
+                </span>
+                <svg className="w-2.5 h-2.5 text-gray-400 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <div className="text-sm text-gray-600">
+                {step.conclusion}
+              </div>
+            </>
+          )}
+
           {/* 如果是最后一步验证修复效果，显示折线图 */}
           {index === 5 && (
             <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
@@ -204,17 +331,17 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={networkQualityData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="time" 
+                    <XAxis
+                      dataKey="time"
                       tick={{ fontSize: 12 }}
                       tickLine={{ stroke: '#666' }}
                     />
-                    <YAxis 
+                    <YAxis
                       tick={{ fontSize: 12 }}
                       tickLine={{ stroke: '#666' }}
                       label={{ value: '数值', angle: -90, position: 'insideLeft' }}
                     />
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value: any, name: any) => {
                         if (name === 'delay') return [`${value}ms`, '网络延迟']
                         if (name === 'packetLoss') return [`${value}%`, '丢包率']
@@ -223,26 +350,26 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
                       }}
                       labelFormatter={(label: any) => `时间: ${label}`}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="delay" 
-                      stroke="#ef4444" 
+                    <Line
+                      type="monotone"
+                      dataKey="delay"
+                      stroke="#ef4444"
                       strokeWidth={2}
                       name="网络延迟"
                       dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="packetLoss" 
-                      stroke="#f59e0b" 
+                    <Line
+                      type="monotone"
+                      dataKey="packetLoss"
+                      stroke="#f59e0b"
                       strokeWidth={2}
                       name="丢包率"
                       dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="availability" 
-                      stroke="#22c55e" 
+                    <Line
+                      type="monotone"
+                      dataKey="availability"
+                      stroke="#22c55e"
                       strokeWidth={2}
                       name="可用性"
                       dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
@@ -269,7 +396,7 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
         </div>
       )
     }
-    
+
     return (
       <button
         onClick={() => onViewChange(step.viewName)}
