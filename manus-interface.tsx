@@ -26,6 +26,18 @@ export default function ManusInterface() {
   // 自动推进步骤
   useEffect(() => {
     if (interfaceState === "full-interface" && currentStep < 6) {
+      // 为每个步骤设置不同的时间间隔
+      const stepDelays = [
+        5000, // 计划 -> 拓扑: 3秒
+        3000, // 拓扑 -> 告警: 3秒
+        3000, // 告警 -> 分析: 3秒
+        3000, // 分析 -> 修复: 3秒
+        8000, // 修复 -> 验证: 6秒 (修复步骤延长)
+        3000, // 验证 -> 完成: 3秒
+      ]
+      
+      const delay = stepDelays[currentStep] || 3000
+      
       const timer = setTimeout(() => {
         setCurrentStep((prev) => prev + 1)
 
@@ -34,7 +46,7 @@ export default function ManusInterface() {
         if (currentStep + 1 < viewMap.length) {
           setCurrentView(viewMap[currentStep + 1])
         }
-      }, 3000) // 每3秒推进一步
+      }, delay)
 
       return () => clearTimeout(timer)
     }

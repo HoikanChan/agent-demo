@@ -62,7 +62,7 @@ function TimelineItem({
       {!isLast && (
         <div 
           className={cn(
-            "absolute left-4 top-8 h-full w-0.5 -translate-x-1/2",
+            "absolute left-4 top-6 h-full w-0.5 -translate-x-1/2",
             lineColors[status]
           )}
         />
@@ -72,7 +72,7 @@ function TimelineItem({
       <div className="relative z-10 flex items-center justify-center">
         <div 
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full border-2",
+            "flex h-7 w-7 items-center justify-center rounded-full border-2",
             statusColors[status]
           )}
         >

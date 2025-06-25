@@ -28,7 +28,7 @@ export default function ContentPanel({ currentView, currentStep }: ContentPanelP
     return viewMap[view]
   }
 
-  const shouldStartView = currentStep > getViewIndex(currentView)
+  const shouldStartView = currentStep >= getViewIndex(currentView)
 
   const renderCurrentView = () => {
     switch (currentView) {
