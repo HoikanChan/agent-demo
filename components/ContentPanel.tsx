@@ -24,12 +24,14 @@ const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
   ({ currentView, currentStep }, ref) => {
     const [showToolPopup, setShowToolPopup] = useState(false)
     const [toolView, setToolView] = useState<ViewType>("plan")
+    const [isAnimating, setIsAnimating] = useState(false)
 
     // 暴露方法给父组件
     useImperativeHandle(ref, () => ({
       switchToTool: (view: ViewType) => {
         setToolView(view)
         setShowToolPopup(true)
+        setIsAnimating(true)
       }
     }))
 
@@ -39,11 +41,29 @@ const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
         const viewMap: ViewType[] = ["plan", "topology", "alerts", "analysis", "recovery", "verification"]
         const currentToolView = viewMap[currentStep]
         if (currentToolView) {
-          setToolView(currentToolView)
-          setShowToolPopup(true)
+          // 只在plan和recovery步骤时显示工具弹出层
+          if (currentToolView === "plan" || currentToolView === "recovery") {
+            setToolView(currentToolView)
+            setShowToolPopup(true)
+            setIsAnimating(true)
+          } else {
+            // 其他步骤隐藏弹出层
+            setShowToolPopup(false)
+            setIsAnimating(false)
+          }
         }
       }
     }, [currentStep])
+
+    // 处理动画结束
+    useEffect(() => {
+      if (showToolPopup && isAnimating) {
+        const timer = setTimeout(() => {
+          setIsAnimating(false)
+        }, 300)
+        return () => clearTimeout(timer)
+      }
+    }, [showToolPopup, isAnimating])
 
     const getViewIndex = (view: ViewType): number => {
       const viewMap = {
@@ -81,6 +101,12 @@ const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
     const handleToolClick = (view: ViewType) => {
       setToolView(view)
       setShowToolPopup(true)
+      setIsAnimating(true)
+    }
+
+    const handleClosePopup = () => {
+      setShowToolPopup(false)
+      setIsAnimating(false)
     }
 
     const getToolDisplayName = (view: ViewType) => {
@@ -109,8 +135,16 @@ const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
 
         {/* Tool Popup - 1/3 screen height */}
         {showToolPopup && (
-          <div className="absolute bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-lg"
-               style={{ height: '40vh' }}>
+          <div 
+            className={`absolute bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 shadow-lg transition-all duration-300 ease-out ${
+              isAnimating ? 'animate-slide-up' : ''
+            }`}
+            style={{ 
+              height: '40vh',
+              transform: showToolPopup ? 'translateY(0)' : 'translateY(100%)',
+              opacity: showToolPopup ? 1 : 0
+            }}
+          >
             {/* Popup Header */}
             <div className="flex items-center justify-between px-3 py-1 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center gap-2">
@@ -120,14 +154,16 @@ const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => setShowToolPopup(false)}
+                  onClick={handleClosePopup}
+                  className="transition-all duration-200 hover:scale-105 hover:bg-gray-100"
                 >
                   <Minimize2 className="w-4 h-4" />
                 </Button>
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => setShowToolPopup(false)}
+                  onClick={handleClosePopup}
+                  className="transition-all duration-200 hover:scale-105 hover:bg-gray-100"
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -135,7 +171,15 @@ const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
             </div>
             
             {/* Popup Content */}
-            <div className="h-full overflow-hidden" style={{ height: 'calc(40vh - 44px)' }}>
+            <div 
+              className={`h-full overflow-hidden transition-all duration-500 ease-out ${
+                isAnimating ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'
+              }`}
+              style={{ 
+                height: 'calc(40vh - 44px)',
+                transitionDelay: isAnimating ? '0ms' : '150ms'
+              }}
+            >
               <ScrollArea className="h-full w-full">
                 <div className="h-full">
                   {renderToolView()}
@@ -144,6 +188,24 @@ const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
             </div>
           </div>
         )}
+        
+        {/* Global styles for animations */}
+        <style jsx global>{`
+          @keyframes slide-up {
+            from {
+              transform: translateY(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+          
+          .animate-slide-up {
+            animation: slide-up 0.3s ease-out;
+          }
+        `}</style>
       </div>
     )
   }

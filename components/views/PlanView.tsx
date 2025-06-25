@@ -1,11 +1,14 @@
 import { useStreamingText } from "../../hooks/useStreamingText"
 import { FileText, Calendar, User, Clock } from "lucide-react"
+import { useRef, useEffect } from "react"
 
 interface PlanViewProps {
   shouldStart?: boolean
 }
 
 export default function PlanView({ shouldStart = false }: PlanViewProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  
   const planContent = `故障修复计划
 
 故障概述
@@ -24,13 +27,20 @@ export default function PlanView({ shouldStart = false }: PlanViewProps) {
 
   const { displayedText } = useStreamingText(planContent, 20, shouldStart)
 
+  // 自动滚动到底部
+  useEffect(() => {
+    if (scrollRef.current && shouldStart) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
+  }, [displayedText, shouldStart])
+
   return (
     <div className="h-full bg-gray-50 p-4 overflow-hidden">
       {/* 文件头部 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 h-70 flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 h-74 flex flex-col">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-gray-50 rounded-t-lg">
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-600" />
+            <FileText className="w-5 h-5 text-gray-600" />
             <span className="font-medium text-gray-900">fault_recovery_plan.md</span>
             {shouldStart && (
               <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -56,8 +66,8 @@ export default function PlanView({ shouldStart = false }: PlanViewProps) {
         </div>
         
         {/* 文件内容区域 */}
-        <div className="flex-1 p-6 bg-white overflow-hidden">
-          <div className="h-full overflow-y-auto">
+        <div className="flex-1 p-6 py-2 bg-white overflow-hidden">
+          <div ref={scrollRef} className="h-full overflow-y-auto">
             <div className="font-mono text-sm leading-relaxed">
               <div className="whitespace-pre-line text-gray-800">
                 {displayedText}
@@ -69,25 +79,6 @@ export default function PlanView({ shouldStart = false }: PlanViewProps) {
           </div>
         </div>
         
-        {/* 状态栏 */}
-        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-t border-gray-100 rounded-b-lg text-xs text-gray-500 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <span>行 {displayedText.split('\n').length}</span>
-            <span>字符 {displayedText.length}</span>
-            <span>UTF-8</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {shouldStart && displayedText && (
-              <>
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                  已保存
-                </div>
-                <span>Markdown</span>
-              </>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   )
