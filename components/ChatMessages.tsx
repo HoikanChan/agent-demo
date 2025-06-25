@@ -4,6 +4,7 @@ import { Timeline, TimelineItem } from "@/components/ui/timeline"
 import { LoadingPulse } from "@/components/ui/loading-dots"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useState, useEffect } from 'react'
+import { triggerCallback, type CallbackType } from "../utils/CallbackManager"
 
 interface ChatMessagesProps {
   onViewChange: (view: ViewType) => void
@@ -37,12 +38,30 @@ function SubSteps({ substeps, onViewChange, stepViewName, stepStatus }: {
 
       substeps.forEach((substep, index) => {
         // 开始执行子步骤
-        setTimeout(() => {
+        setTimeout(async () => {
           setSubstepStates(prev => {
             const newStates = [...prev]
             newStates[index] = 'in-progress'
             return newStates
           })
+          
+          // 在子步骤开始时立即触发回调
+          const callbackTypeMap: Record<string, CallbackType> = {
+            '浏览网络拓扑图页面': 'browse-topology-analysis',
+            '浏览查看拓扑情况': 'browse-topology-verification',
+            '浏览告警监控页面': 'browse-alerts',
+            '点击查看告警详情': 'click-alert-details'
+          }
+          
+          const callbackType = callbackTypeMap[substep.toolName]
+          if (callbackType) {
+            await triggerCallback(callbackType, substep.toolName, {
+              stepIndex: index,
+              conclusion: substep.conclusion,
+              viewName: stepViewName,
+              triggeredBy: 'auto-start'
+            })
+          }
         }, substep.startDelay || 0)
 
         // 完成子步骤
@@ -78,7 +97,27 @@ function SubSteps({ substeps, onViewChange, stepViewName, stepStatus }: {
             {substepStatus === 'completed' && (
               <>
                 <button
-                  onClick={() => onViewChange(stepViewName)}
+                  onClick={async () => {
+                    onViewChange(stepViewName)
+                    
+                    // 触发相应的回调
+                    const callbackTypeMap: Record<string, CallbackType> = {
+                      '浏览网络拓扑图页面': 'browse-topology-analysis',
+                      '浏览查看拓扑情况': 'browse-topology-verification',
+                      '浏览告警监控页面': 'browse-alerts',
+                      '点击查看告警详情': 'click-alert-details'
+                    }
+                    
+                    const callbackType = callbackTypeMap[substep.toolName]
+                    if (callbackType) {
+                      await triggerCallback(callbackType, substep.toolName, {
+                        stepIndex: index,
+                        conclusion: substep.conclusion,
+                        viewName: stepViewName,
+                        triggeredBy: 'user-click'
+                      })
+                    }
+                  }}
                   className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-150 group"
                 >
                   <substep.toolIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-600" />
@@ -102,6 +141,9 @@ function SubSteps({ substeps, onViewChange, stepViewName, stepStatus }: {
 }
 
 export default function ChatMessages({ onViewChange, currentStep, userTask, onConfirmRecovery, analysisCompleted }: ChatMessagesProps) {
+  // 跟踪已触发回调的步骤
+  const [triggeredSteps, setTriggeredSteps] = useState<Set<number>>(new Set())
+  
   // 倒换前后网络质量数据变化
   const networkQualityData = [
     { time: '14:40', delay: 2.5, packetLoss: 0, availability: 99.9, status: '正常运行' },
@@ -226,6 +268,33 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
     return <step.icon className="w-4 h-4" />
   }
 
+  // 自动触发步骤进行中回调
+  useEffect(() => {
+    steps.forEach((step, index) => {
+      const status = getStepStatus(index)
+      if (status === "in-progress" && !step.substeps && !triggeredSteps.has(index)) {
+        const callbackTypeMap: Record<string, CallbackType> = {
+          '浏览网络拓扑图页面': 'browse-topology-analysis',
+          '浏览查看拓扑情况': 'browse-topology-verification',
+          '浏览告警监控页面': 'browse-alerts',
+          '点击查看告警详情': 'click-alert-details'
+        }
+        
+        const callbackType = callbackTypeMap[step.toolName]
+        if (callbackType) {
+          triggerCallback(callbackType, step.toolName, {
+            conclusion: step.conclusion,
+            viewName: step.viewName,
+            triggeredBy: 'auto-start'
+          })
+          
+          // 标记为已触发
+          setTriggeredSteps(prev => new Set(prev).add(index))
+        }
+      }
+    })
+  }, [currentStep, analysisCompleted, triggeredSteps])
+
   const renderStepContent = (step: any, index: number) => {
     const status = getStepStatus(index)
 
@@ -306,7 +375,25 @@ export default function ChatMessages({ onViewChange, currentStep, userTask, onCo
           ) : (
             <>
               <button
-                onClick={() => onViewChange(step.viewName)}
+                onClick={async () => {
+                  onViewChange(step.viewName)
+                  
+                  // 触发相应的回调
+                  const callbackTypeMap: Record<string, CallbackType> = {
+                    '浏览网络拓扑图页面': 'browse-topology-analysis',
+                    '浏览查看拓扑情况': 'browse-topology-verification',
+                    '浏览告警监控页面': 'browse-alerts',
+                    '点击查看告警详情': 'click-alert-details'
+                  }
+                  
+                  const callbackType = callbackTypeMap[step.toolName]
+                  if (callbackType) {
+                    await triggerCallback(callbackType, step.toolName, {
+                      conclusion: step.conclusion,
+                      viewName: step.viewName
+                    })
+                  }
+                }}
                 className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-150 group"
               >
                 <step.toolIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-600" />

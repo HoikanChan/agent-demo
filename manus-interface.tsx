@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from "react"
 import type { ViewType, InterfaceState } from "./types"
 import ContentPanel, { type ContentPanelRef } from "./components/ContentPanel"
 import ChatPanel from "./components/ChatPanel"
+import { setupCallbacks } from "./examples/CallbackExample"
+
+setupCallbacks()
 
 export default function ManusInterface() {
   const [interfaceState, setInterfaceState] = useState<InterfaceState>("chat-only")

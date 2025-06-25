@@ -112,11 +112,11 @@ const ContentPanel = forwardRef<ContentPanelRef, ContentPanelProps>(
 
     const getToolDisplayName = (view: ViewType) => {
       const nameMap = {
-        plan: "计划工具",
+        plan: "新建故障修复计划文档",
         topology: "拓扑工具", 
         alerts: "告警工具",
         analysis: "分析工具",
-        recovery: "修复工具",
+        recovery: "执行倒换脚本",
         verification: "验证工具"
       }
       return nameMap[view]
