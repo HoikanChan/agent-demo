@@ -73,7 +73,7 @@ PING 8.8.8.8: 56 data bytes
         {/* 终端内容区域 */}
         <div className="flex-1 p-4 bg-gray-900 overflow-hidden">
           <div ref={scrollRef} className="h-full overflow-y-auto">
-            <div className="font-mono text-sm leading-relaxed">
+            <div className="text-sm leading-relaxed" style={{ fontFamily: 'Consolas, "Courier New", monospace' }}>
               <div className="whitespace-pre-line text-gray-100">
                 {displayedText}
                 {shouldStart && displayedText && (

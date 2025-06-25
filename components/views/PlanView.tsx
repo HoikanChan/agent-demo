@@ -66,7 +66,7 @@ export default function PlanView({ shouldStart = false }: PlanViewProps) {
         {/* 文件内容区域 */}
         <div className="flex-1 p-6 py-2 bg-white overflow-hidden">
           <div ref={scrollRef} className="h-full overflow-y-auto">
-            <div className="font-mono text-sm leading-relaxed">
+            <div className="text-sm leading-relaxed" style={{ fontFamily: 'Consolas, "Courier New", monospace' }}>
               <div className="whitespace-pre-line text-gray-800">
                 {displayedText}
                 {shouldStart && displayedText && (
