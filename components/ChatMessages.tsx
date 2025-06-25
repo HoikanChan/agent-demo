@@ -1,15 +1,28 @@
-import { FileText, Globe, AlertTriangle, Search, Terminal, Shield, Cpu, CheckCircle, Clock } from "lucide-react"
+import { FileText, Globe, AlertTriangle, Search, Terminal, Shield, Cpu, CheckCircle, Clock, BookOpen, Play, User } from "lucide-react"
 import type { ViewType } from "../types"
 import { Timeline, TimelineItem } from "@/components/ui/timeline"
 import { LoadingPulse } from "@/components/ui/loading-dots"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface ChatMessagesProps {
   onViewChange: (view: ViewType) => void
   currentStep: number
   userTask: string
+  onConfirmRecovery?: () => void
+  analysisCompleted?: boolean
 }
 
-export default function ChatMessages({ onViewChange, currentStep, userTask }: ChatMessagesProps) {
+export default function ChatMessages({ onViewChange, currentStep, userTask, onConfirmRecovery, analysisCompleted }: ChatMessagesProps) {
+  // 倒换前后网络质量数据变化
+  const networkQualityData = [
+    { time: '14:40', delay: 2.5, packetLoss: 0, availability: 99.9, status: '正常运行' },
+    { time: '14:42', delay: 15.8, packetLoss: 2.1, availability: 85.2, status: '故障检测' },
+    { time: '14:44', delay: 45.2, packetLoss: 8.5, availability: 45.0, status: '倒换中' },
+    { time: '14:46', delay: 3.2, packetLoss: 0.1, availability: 98.5, status: '倒换完成' },
+    { time: '14:48', delay: 2.8, packetLoss: 0, availability: 99.2, status: '验证中' },
+    { time: '14:50', delay: 2.3, packetLoss: 0, availability: 99.8, status: '完全恢复' },
+  ]
+
   const steps = [
     {
       title: "制定详细的故障修复计划，分析故障范围和影响",
@@ -45,17 +58,28 @@ export default function ChatMessages({ onViewChange, currentStep, userTask }: Ch
       title: "进行故障根因分析，确定最佳修复方案",
       toolName: "故障分析工具",
       toolIcon: Search,
-      statusText: "正在执行诊断命令，分析日志文件",
+      statusText: "加载故障定位修复知识库",
       icon: Search,
       viewName: "analysis" as ViewType,
       time: "14:38",
-      conclusion: "根因分析完成：光纤连接器松动导致信号丢失，建议立即切换至备用链路并安排现场检修"
+      conclusion: "根因分析完成：SW-CORE-01主链路交换机HW-CORE-01-01端口故障，建议立即切换至备用链路并安排现场检修",
+      requiresConfirmation: true,
+      recoveryPlan: {
+        title: "自动修复方案",
+        steps: [
+          "1. 立即切换至备用链路（预计耗时：30秒）",
+          "2. 验证备用链路连通性（预计耗时：1分钟）",
+          "3. 重新路由网络流量（预计耗时：2分钟）",
+          "4. 监控网络状态稳定性（预计耗时：5分钟）"
+        ],
+        expectedResult: "网络连通性将在3分钟内完全恢复，服务中断时间最小化，所有业务区域恢复正常访问"
+      }
     },
     {
       title: "生成并执行自动恢复策略，修复网络故障",
-      toolName: "Shell脚本执行工具",
+      toolName: "执行倒换命令",
       toolIcon: Terminal,
-      statusText: "正在执行恢复脚本：switch_to_backup_link.sh",
+      statusText: "正在执行倒换命令：switch_to_backup_link.sh",
       icon: Terminal,
       viewName: "recovery" as ViewType,
       time: "预计 14:45",
@@ -63,19 +87,22 @@ export default function ChatMessages({ onViewChange, currentStep, userTask }: Ch
     },
     {
       title: "验证修复效果，确认网络服务恢复正常",
-      toolName: "验证测试工具",
-      toolIcon: Shield,
-      statusText: "等待恢复完成后执行连通性测试",
-      icon: Shield,
-      viewName: "verification" as ViewType,
+      toolName: "浏览查看拓扑情况",
+      toolIcon: Globe,
+      statusText: "正在查看网络拓扑，验证倒换效果",
+      icon: Globe,
+      viewName: "topology" as ViewType,
       time: "预计 14:50",
-      conclusion: "验证完成：所有业务区域连通性正常，延迟<5ms，丢包率0%，服务全面恢复"
+      conclusion: "验证完成：所有业务区域连通性正常，延迟<5ms，丢包率0%，服务全面恢复。折线图显示倒换前后数据变化：流量从主链路(故障)成功切换至备用链路，网络吞吐量恢复至正常水平95%以上"
     },
   ]
 
   const getStepStatus = (index: number) => {
     if (index < currentStep) return "completed"
-    if (index === currentStep) return "in-progress"
+    if (index === currentStep) {
+      if (index === 3 && analysisCompleted) return "completed"
+      return "in-progress"
+    }
     return "pending"
   }
 
@@ -90,11 +117,192 @@ export default function ChatMessages({ onViewChange, currentStep, userTask }: Ch
     return <step.icon className="w-4 h-4" />
   }
 
+  const renderStepContent = (step: any, index: number) => {
+    const status = getStepStatus(index)
+    
+    if (status === "in-progress") {
+      // 特殊处理第4步 - 显示调用工具加载修复知识
+      if (index === 3) {
+        return (
+          <div className="mt-2 space-y-3">
+            <div className="flex items-center gap-2 text-sm text-blue-600">
+              <LoadingPulse size="sm" />
+              <span>{step.statusText}</span>
+            </div>
+          </div>
+        )
+      }
+      return (
+        <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
+          <LoadingPulse size="sm" />
+          <span>{step.statusText}</span>
+        </div>
+      )
+    }
+    
+    if (status === "completed") {
+      // 特殊处理第4步 - 显示修复方案和确认按钮
+      if (index === 3 && step.recoveryPlan) {
+        return (
+          <div className="mt-2 space-y-3">
+            <div className="text-sm text-gray-600">
+              {step.conclusion}
+            </div>
+            
+            {/* 修复方案展示 */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Terminal className="w-4 h-4 text-green-600" />
+                <span className="font-medium text-green-800">{step.recoveryPlan.title}</span>
+              </div>
+              <div className="space-y-1 mb-3">
+                {step.recoveryPlan.steps.map((planStep: string, stepIndex: number) => (
+                  <div key={stepIndex} className="text-sm text-green-700">{planStep}</div>
+                ))}
+              </div>
+              <div className="text-sm text-green-600 font-medium">
+                预期效果：{step.recoveryPlan.expectedResult}
+              </div>
+            </div>
+            
+            {/* 确认按钮 */}
+            {currentStep === 3 && onConfirmRecovery && (
+              <button
+                onClick={onConfirmRecovery}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <Play className="w-4 h-4" />
+                <span>确认执行修复方案</span>
+              </button>
+            )}
+          </div>
+        )
+      }
+      
+      return (
+        <div className="mt-2 space-y-2">
+          <button
+            onClick={() => onViewChange(step.viewName)}
+            className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-150 group"
+          >
+            <step.toolIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-600" />
+            <span className="text-xs text-gray-600 group-hover:text-gray-700">
+              {step.toolName}
+            </span>
+            <svg className="w-2.5 h-2.5 text-gray-400 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+          <div className="text-sm text-gray-600">
+            {step.conclusion}
+          </div>
+          {/* 如果是最后一步验证修复效果，显示折线图 */}
+          {index === 5 && (
+            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-800 mb-3">网络质量指标变化</h4>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={networkQualityData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="time" 
+                      tick={{ fontSize: 12 }}
+                      tickLine={{ stroke: '#666' }}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickLine={{ stroke: '#666' }}
+                      label={{ value: '数值', angle: -90, position: 'insideLeft' }}
+                    />
+                    <Tooltip 
+                      formatter={(value: any, name: any) => {
+                        if (name === 'delay') return [`${value}ms`, '网络延迟']
+                        if (name === 'packetLoss') return [`${value}%`, '丢包率']
+                        if (name === 'availability') return [`${value}%`, '可用性']
+                        return [value, name]
+                      }}
+                      labelFormatter={(label: any) => `时间: ${label}`}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="delay" 
+                      stroke="#ef4444" 
+                      strokeWidth={2}
+                      name="网络延迟"
+                      dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="packetLoss" 
+                      stroke="#f59e0b" 
+                      strokeWidth={2}
+                      name="丢包率"
+                      dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="availability" 
+                      stroke="#22c55e" 
+                      strokeWidth={2}
+                      name="可用性"
+                      dot={{ fill: '#22c55e', strokeWidth: 2, r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-2 flex items-center gap-6 text-xs text-gray-600">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5 bg-red-500"></div>
+                  <span>网络延迟 (ms)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5 bg-amber-500"></div>
+                  <span>丢包率 (%)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-0.5 bg-green-500"></div>
+                  <span>可用性 (%)</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+    
+    return (
+      <button
+        onClick={() => onViewChange(step.viewName)}
+        className="flex items-center gap-1.5 mt-2 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-150 group"
+      >
+        <step.toolIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-600" />
+        <span className="text-xs text-gray-600 group-hover:text-gray-700">
+          {step.toolName}
+        </span>
+        <svg className="w-2.5 h-2.5 text-gray-400 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    )
+  }
+
   return (
     <div>
       {/* User Message */}
-      <div className="text-right">
-        <div className="text-sm text-gray-500 mb-2">{userTask}</div>
+      <div className="flex items-start justify-end gap-3 mb-6">
+        <div className="flex-1 max-w-2xl">
+          <div className="bg-gray-100 text-gray-800 rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
+            <div className="text-sm leading-relaxed">{userTask}</div>
+          </div>
+          <div className="flex items-center justify-end gap-2 mt-2">
+            <span className="text-xs text-gray-500">User</span>
+            <span className="text-xs text-gray-400">•</span>
+            <span className="text-xs text-gray-500">刚刚</span>
+          </div>
+        </div>
+        <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
+          <User className="w-4 h-4 text-white" />
+        </div>
       </div>
 
       {/* Assistant Response */}
@@ -106,7 +314,7 @@ export default function ChatMessages({ onViewChange, currentStep, userTask }: Ch
       </div>
       <div className="text-gray-700 leading-relaxed mb-2 text-sm">
         我将协助您通过自动化故障响应系统解决网络故障。我将分析当前网络拓扑，
-        审查活跃告警，执行全面故障诊断，并实施自动化恢复策略。
+        审查活跃告警，执行全面故障诊断，并实施自动化恢复策略。现在您可以通过点击上方的工具按钮来使用各种分析和修复工具。
       </div>
 
       {/* Timeline Section */}
@@ -122,43 +330,7 @@ export default function ChatMessages({ onViewChange, currentStep, userTask }: Ch
                   status={getStepStatus(index)}
                   icon={getStepIcon(step, index)}
                 >
-                  {getStepStatus(index) === "in-progress" ? (
-                    <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">
-                      <LoadingPulse size="sm" />
-                      <span>正在{step.statusText}...</span>
-                    </div>
-                  ) : getStepStatus(index) === "completed" ? (
-                    <div className="mt-2 space-y-2">
-                      <button
-                        onClick={() => onViewChange(step.viewName)}
-                        className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-150 group"
-                      >
-                        <step.toolIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-600" />
-                        <span className="text-xs text-gray-600 group-hover:text-gray-700">
-                          {step.toolName}
-                        </span>
-                        <svg className="w-2.5 h-2.5 text-gray-400 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                      <div className="text-sm text-gray-600">
-                        {step.conclusion}
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => onViewChange(step.viewName)}
-                      className="flex items-center gap-1.5 mt-2 px-2 py-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md transition-all duration-150 group"
-                    >
-                      <step.toolIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-600" />
-                      <span className="text-xs text-gray-600 group-hover:text-gray-700">
-                        {step.toolName}
-                      </span>
-                      <svg className="w-2.5 h-2.5 text-gray-400 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  )}
+                  {renderStepContent(step, index)}
                 </TimelineItem>
               ))}
             </Timeline>
@@ -166,49 +338,12 @@ export default function ChatMessages({ onViewChange, currentStep, userTask }: Ch
         </div>
       )}
 
-      {/* Additional Messages - only show after certain steps */}
-      {currentStep >= 4 && (
-        <>
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Cpu className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 mb-2">UI智能体</div>
-              <div className="text-gray-700 leading-relaxed">
-                UI智能体 正在查看路径于{" "}
-                <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono">/home/ubuntu/fault-recovery</code>{" "}
-                的服务修复到公网网路上。请点击确认按钮完成恢复。
-              </div>
-            </div>
-          </div>
-
-          <div className="ml-11">
-            <div className="flex items-center gap-3 mb-3 cursor-pointer hover:bg-blue-50 p-2 rounded-lg transition-colors">
-              <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs">▼</span>
-              </div>
-              <span className="text-gray-700 font-medium">执行故障恢复</span>
-            </div>
-            <div className="ml-9 text-sm text-gray-600">等待用户确认以完成故障修复和网络恢复验证。</div>
-          </div>
-        </>
-      )}
-
-      {/* Final Message - only show after all steps */}
-      {currentStep >= 5 && (
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Cpu className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-gray-900 mb-2">UI智能体</div>
-            <div className="text-gray-700 leading-relaxed mb-3">
-              我已经为故障恢复准备好了所有工具并启动了修复流程。要完成恢复，请点击界面中出现的确认按钮。
-            </div>
-            <div className="text-gray-700 leading-relaxed">
-              确认后，系统将执行自动恢复策略，修复网络故障并恢复正常服务。完成后，我将为您提供详细的修复报告和验证结果。
-            </div>
+      {/* Task Completion Badge - only show after all steps including chart */}
+      {currentStep > 5 && (
+        <div className="flex items-center justify-center mt-6">
+          <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <span className="text-green-800 font-medium">故障修复任务已完成</span>
           </div>
         </div>
       )}

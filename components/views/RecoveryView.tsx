@@ -33,7 +33,7 @@ PING 8.8.8.8: 56 data bytes
   return (
     <div className="h-full bg-gray-50 p-4 overflow-hidden">
       {/* 终端窗口 */}
-      <div className="bg-gray-900 rounded-lg shadow-sm border border-gray-200 mb-4 h-168 flex flex-col">
+      <div className="bg-gray-900 rounded-lg shadow-sm border border-gray-200 mb-4 h-70 flex flex-col">
         {/* 终端头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 bg-gray-800 rounded-t-lg">
           <div className="flex items-center gap-2">

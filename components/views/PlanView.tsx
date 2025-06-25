@@ -27,7 +27,7 @@ export default function PlanView({ shouldStart = false }: PlanViewProps) {
   return (
     <div className="h-full bg-gray-50 p-4 overflow-hidden">
       {/* 文件头部 */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 h-124 flex flex-col">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 h-70 flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50 rounded-t-lg">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-600" />

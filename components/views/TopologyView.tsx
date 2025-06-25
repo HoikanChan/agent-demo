@@ -11,7 +11,7 @@ export default function TopologyView({ shouldStart = false }: TopologyViewProps)
   const { displayedText } = useStreamingText(statusText, 50, shouldStart)
 
   return (
-    <div className="h-full bg-gray-900 p-4">
+    <div className="h-full bg-gray-900 p-6">
       <div className="text-white">
         <h2 className="text-xl font-bold mb-4">网络拓扑图</h2>
         <div className="bg-gray-800 rounded-lg p-6 h-96 flex items-center justify-center">

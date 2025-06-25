@@ -7,7 +7,7 @@ interface AlertsViewProps {
 
 export default function AlertsView({ shouldStart = false }: AlertsViewProps) {
   return (
-    <div className="h-full bg-white p-4">
+    <div className="h-full bg-white p-6">
       <h2 className="text-xl font-bold text-gray-900 mb-4">系统告警</h2>
       <div className="space-y-3">
         <Card className="border-red-200 bg-red-50">

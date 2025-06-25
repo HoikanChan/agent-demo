@@ -13,9 +13,12 @@ interface ChatPanelProps {
   onViewChange: (view: ViewType) => void
   currentStep: number
   userTask: string
+  onToolSwitch?: (view: ViewType) => void
+  onConfirmRecovery?: () => void
+  analysisCompleted?: boolean
 }
 
-export default function ChatPanel({ onViewChange, currentStep, userTask }: ChatPanelProps) {
+export default function ChatPanel({ onViewChange, currentStep, userTask, onToolSwitch, onConfirmRecovery, analysisCompleted }: ChatPanelProps) {
   const [inputValue, setInputValue] = useState("")
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
@@ -23,6 +26,15 @@ export default function ChatPanel({ onViewChange, currentStep, userTask }: ChatP
     if (inputValue.trim()) {
       setInputValue("")
     }
+  }
+
+  const handleViewChange = (view: ViewType) => {
+    // 通知父组件切换工具
+    if (onToolSwitch) {
+      onToolSwitch(view)
+    }
+    // 保持原有的onViewChange调用
+    onViewChange(view)
   }
 
   // 当步骤变化时自动滚动到底部
@@ -39,20 +51,16 @@ export default function ChatPanel({ onViewChange, currentStep, userTask }: ChatP
 
   return (
     <div className="w-[600px] h-screen flex flex-col bg-white">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r from-white to-blue-50 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <Cpu className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-medium text-gray-900">UI智能体</span>
-        </div>
-        <div className="text-sm text-gray-500">3/25</div>
-      </div>
 
       {/* Chat Messages */}
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-6 min-h-0">
-        <ChatMessages onViewChange={onViewChange} currentStep={currentStep} userTask={userTask} />
+        <ChatMessages 
+          onViewChange={handleViewChange} 
+          currentStep={currentStep} 
+          userTask={userTask}
+          onConfirmRecovery={onConfirmRecovery}
+          analysisCompleted={analysisCompleted}
+        />
       </ScrollArea>
 
       {/* Chat Input */}
